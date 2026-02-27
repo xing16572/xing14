@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意见建议箱</title>
+    <!-- 引入依赖CDN，无需本地文件，GitHub Pages可正常加载 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 核心配置 -->
+    <script>
+        // ===================== 请替换为你自己的Supabase配置 =====================
+        const SUPABASE_URL = '你的Supabase项目URL';
+        const SUPABASE_KEY = '你的Supabase项目anon公钥';
+        // 固定管理员密码
+        const ADMIN_PASSWORD = '13579xc';
+        // ========================================================================
+
+        // 初始化Supabase客户端
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // 样式配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-shadow {
+                box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fa-solid fa-box-archive mr-2"></i>
+                意见建议箱
+            </h1>
+            <button id="adminBtn" class="px-4 py-2 bg-white text-primary rounded-md font-medium hover:bg-gray-100 transition">
+                <i class="fa-solid fa-user-shield mr-1"></i>
+                管理员后台
+            </button>
+        </div>
+    </nav>
+
+    <!-- 前台：建议提交页面 -->
+    <div id="submitSection" class="container mx-auto px-4 py-10">
+        <div class="max-w-2xl mx-auto bg-white rounded-lg card-shadow p-6 md:p-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">您的建议，我们很重视</h2>
+                <p class="text-gray-500">每一条反馈都是我们进步的动力，感谢您的宝贵建议</p>
+            </div>
+
+            <!-- 建议提交表单 -->
+            <form id="suggestForm" class="space-y-5">
+                <div>
+                    <label for="title" class="block text-gray-700 font-medium mb-1">建议标题 <span class="text-red-500">*</span></label>
+                    <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入建议的核心主题" required>
+                </div>
+
+                <div>
+                    <label for="content" class="block text-gray-700 font-medium mb-1">建议详情 <span class="text-red-500">*</span></label>
+                    <textarea id="content" name="content" rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请详细描述您的建议、问题或想法..." required></textarea>
+                </div>
+
+                <div>
+                    <label for="contact" class="block text-gray-700 font-medium mb-1">联系方式（可选）</label>
+                    <input type="text" id="contact" name="contact" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="手机号/邮箱，方便我们与您沟通">
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="isAnonymous" name="isAnonymous" class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
+                    <label for="isAnonymous" class="ml-2 text-gray-700">匿名提交（勾选后将隐藏您的联系方式）</label>
+                </div>
+
+                <button type="submit" class="w-full bg-primary text-white py-3 rounded-md font-medium hover:bg-primary/90 transition flex items-center justify-center">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>
+                    提交建议
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 管理员登录弹窗 -->
+    <div id="loginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg w-full max-w-md mx-4 card-shadow">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">管理员登录</h3>
+                    <button id="closeLoginModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label for="password" class="block text-gray-700 font-medium mb-1">管理员密码</label>
+                        <input type="password" id="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入管理员密码" required>
+                    </div>
+                    <button type="submit" class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition">
+                        登录后台
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 后台：建议管理页面 -->
+    <div id="adminSection" class="container mx-auto px-4 py-8 hidden">
+        <div class="bg-white rounded-lg card-shadow p-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">建议管理列表</h2>
+                    <p class="text-gray-500 mt-1" id="suggestCount">共 0 条建议</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="clearAllBtn" class="px-4 py-2 bg-red-500 text-white rounded-md font-medium hover:bg-red-600 transition">
+                        <i class="fa-solid fa-trash mr-1"></i>
+                        清空所有建议
+                    </button>
+                    <button id="logoutBtn" class="px-4 py-2 bg-gray-500 text-white rounded-md font-medium hover:bg-gray-600 transition">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i>
+                        退出登录
+                    </button>
+                </div>
+            </div>
+
+            <!-- 建议列表表格 -->
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium w-12">ID</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium">标题</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium w-40">提交时间</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium w-24">提交类型</th>
+                            <th class="px-4 py-3 text-left text-gray-600 font-medium w-32">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suggestTableBody">
+                        <tr class="text-center">
+                            <td colspan="5" class="px-4 py-10 text-gray-400">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 建议详情弹窗 -->
+    <div id="detailModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg w-full max-w-3xl mx-4 card-shadow max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">建议详情</h3>
+                    <button id="closeDetailModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-600 font-medium text-sm mb-1">建议标题</label>
+                        <p id="detailTitle" class="text-gray-800 text-lg font-medium"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-600 font-medium text-sm mb-1">提交时间</label>
+                        <p id="detailTime" class="text-gray-700"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-600 font-medium text-sm mb-1">提交类型</label>
+                        <p id="detailType" class="text-gray-700"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-600 font-medium text-sm mb-1">联系方式</label>
+                        <p id="detailContact" class="text-gray-700"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-600 font-medium text-sm mb-1">建议详情</label>
+                        <div id="detailContent" class="p-4 bg-gray-50 rounded-md text-gray-700 whitespace-pre-wrap"></div>
+                    </div>
+
+                    <div class="flex justify-end mt-6">
+                        <button id="deleteDetailBtn" class="px-4 py-2 bg-red-500 text-white rounded-md font-medium hover:bg-red-600 transition mr-2">
+                            <i class="fa-solid fa-trash mr-1"></i>
+                            删除该建议
+                        </button>
+                        <button id="closeDetailBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300 transition">
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentSuggestId = null;
+        let isLogin = false;
+
+        // 工具函数：格式化时间
+        function formatTime(timeStr) {
+            return new Date(timeStr).toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        // 工具函数：获取所有建议
+        async function getSuggestions() {
+            const { data, error } = await supabase
+                .from('suggestions')
+                .select('*')
+                .order('create_time', { ascending: false });
+            if (error) {
+                console.error('获取数据失败', error);
+                return [];
+            }
+            return data;
+        }
+
+        // 工具函数：提交建议
+        async function submitSuggestion(suggestData) {
+            const { error } = await supabase
+                .from('suggestions')
+                .insert([suggestData]);
+            if (error) {
+                alert('提交失败，请重试！');
+                console.error(error);
+                return false;
+            }
+            return true;
+        }
+
+        // 工具函数：删除单条建议
+        async function deleteSuggestion(id) {
+            const { error } = await supabase
+                .from('suggestions')
+                .delete()
+                .eq('id', id);
+            if (error) {
+                alert('删除失败，请重试！');
+                return false;
+            }
+            return true;
+        }
+
+        // 工具函数：清空所有建议
+        async function clearAllSuggestions() {
+            const { error } = await supabase
+                .from('suggestions')
+                .delete()
+                .gte('id', 0);
+            if (error) {
+                alert('清空失败，请重试！');
+                return false;
+            }
+            return true;
+        }
+
+        // 渲染建议列表
+        async function renderSuggestList() {
+            const suggestions = await getSuggestions();
+            suggestCount.innerText = `共 ${suggestions.length} 条建议`;
+
+            if (suggestions.length === 0) {
+                suggestTableBody.innerHTML = `
+                    <tr class="text-center">
+                        <td colspan="5" class="px-4 py-10 text-gray-400">暂无提交的建议</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            suggestions.forEach((item) => {
+                html += `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="px-4 py-3 text-gray-800">${item.id}</td>
+                        <td class="px-4 py-3">
+                            <p class="font-medium text-gray-800 truncate max-w-md">${item.title}</p>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600 text-sm">${formatTime(item.create_time)}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">${item.is_anonymous ? '匿名' : '实名'}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button onclick='openDetailModal(${JSON.stringify(item)})' class="px-3 py-1 bg-primary text-white rounded text-sm hover:bg-primary/90 mr-1">查看</button>
+                            <button onclick="handleDelete(${item.id})" class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            suggestTableBody.innerHTML = html;
+        }
+
+        // 打开详情弹窗
+        function openDetailModal(item) {
+            currentSuggestId = item.id;
+            document.getElementById('detailTitle').innerText = item.title;
+            document.getElementById('detailTime').innerText = formatTime(item.create_time);
+            document.getElementById('detailType').innerText = item.is_anonymous ? '匿名提交' : '实名提交';
+            document.getElementById('detailContact').innerText = item.is_anonymous ? '匿名提交，无联系方式' : (item.contact || '未填写联系方式');
+            document.getElementById('detailContent').innerText = item.content;
+            detailModal.classList.remove('hidden');
+        }
+
+        // 处理删除
+        async function handleDelete(id) {
+            if (!confirm('确定要删除这条建议吗？此操作不可恢复！')) return;
+            const success = await deleteSuggestion(id);
+            if (success) {
+                alert('建议已删除');
+                renderSuggestList();
+            }
+        }
+
+        // 事件监听：打开登录弹窗/进入后台
+        adminBtn.addEventListener('click', function() {
+            if (isLogin) {
+                submitSection.classList.add('hidden');
+                adminSection.classList.remove('hidden');
+                renderSuggestList();
+            } else {
+                loginModal.classList.remove('hidden');
+            }
+        });
+
+        // 事件监听：关闭登录弹窗
+        closeLoginModal.addEventListener('click', function() {
+            loginModal.classList.add('hidden');
+            loginForm.reset();
+        });
+
+        // 事件监听：登录表单提交
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const inputPassword = document.getElementById('password').value;
+            if (inputPassword === ADMIN_PASSWORD) {
+                isLogin = true;
+                sessionStorage.setItem('suggestBox_isLogin', 'true');
+                loginModal.classList.add('hidden');
+                loginForm.reset();
+                submitSection.classList.add('hidden');
+                adminSection.classList.remove('hidden');
+                renderSuggestList();
+                alert('登录成功！');
+            } else {
+                alert('密码错误，请重新输入！');
+                document.getElementById('password').focus();
+            }
+        });
+
+        // 事件监听：建议表单提交
+        suggestForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            const contact = document.getElementById('contact').value.trim();
+            const isAnonymous = document.getElementById('isAnonymous').checked;
+
+            if (!title || !content) {
+                alert('标题和建议内容不能为空！');
+                return;
+            }
+
+            const success = await submitSuggestion({ title, content, contact, is_anonymous: isAnonymous });
+            if (success) {
+                suggestForm.reset();
+                alert('您的建议已成功提交，感谢您的反馈！');
+            }
+        });
+
+        // 事件监听：退出登录
+        logoutBtn.addEventListener('click', function() {
+            if (!confirm('确定要退出登录吗？')) return;
+            isLogin = false;
+            sessionStorage.removeItem('suggestBox_isLogin');
+            adminSection.classList.add('hidden');
+            submitSection.classList.remove('hidden');
+            alert('已成功退出登录');
+        });
+
+        // 事件监听：清空所有建议
+        clearAllBtn.addEventListener('click', async function() {
+            if (!confirm('确定要清空所有建议吗？此操作不可恢复！')) return;
+            const success = await clearAllSuggestions();
+            if (success) {
+                alert('所有建议已清空');
+                renderSuggestList();
+            }
+        });
+
+        // 事件监听：关闭详情弹窗
+        closeDetailModal.addEventListener('click', function() {
+            detailModal.classList.add('hidden');
+            currentSuggestId = null;
+        });
+        closeDetailBtn.addEventListener('click', function() {
+            detailModal.classList.add('hidden');
+            currentSuggestId = null;
+        });
+
+        // 事件监听：详情页删除按钮
+        deleteDetailBtn.addEventListener('click', async function() {
+            if (currentSuggestId) {
+                if (!confirm('确定要删除这条建议吗？此操作不可恢复！')) return;
+                const success = await deleteSuggestion(currentSuggestId);
+                if (success) {
+                    detailModal.classList.add('hidden');
+                    currentSuggestId = null;
+                    alert('建议已删除');
+                    renderSuggestList();
+                }
+            }
+        });
+
+        // 事件监听：点击弹窗背景关闭
+        window.addEventListener('click', function(e) {
+            if (e.target === loginModal) {
+                loginModal.classList.add('hidden');
+                loginForm.reset();
+            }
+            if (e.target === detailModal) {
+                detailModal.classList.add('hidden');
+                currentSuggestId = null;
+            }
+        });
+
+        // 页面加载初始化
+        window.onload = function() {
+            if (sessionStorage.getItem('suggestBox_isLogin') === 'true') {
+                isLogin = true;
+            }
+        };
+    </script>
+</body>
+</html>
